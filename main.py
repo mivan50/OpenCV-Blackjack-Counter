@@ -1,8 +1,9 @@
 import numpy as np
 import cv2
+import os
 
 
-def get_card_info(card_image, identifier):
+def get_card_info(card_image):
     crop_img = card_image[0:90, 0:30]
     crop_img = cv2.resize(crop_img, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
     crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
@@ -27,14 +28,48 @@ def get_card_info(card_image, identifier):
     resized_region_number = cv2.resize(region_number, (70, 110), interpolation=cv2.INTER_LINEAR)
     resized_region_suit = cv2.resize(region_suit, (70, 110), interpolation=cv2.INTER_LINEAR)
 
-    cv2.imshow(f'Resized_Region_Number_{identifier}', resized_region_number)
-    cv2.imshow(f'Resized_Region_Suit_{identifier}', resized_region_suit)
+    card_num = find_best_match(resized_region_number)
+    card_suit = find_best_match(resized_region_suit)
 
-    card_id = "Spades"
-    return card_id
+    card_id = card_num + '' + card_suit
+    return card_id, card_num
 
 
-img = cv2.imread('assets/fourCards.jpg')
+def find_best_match(query_img):
+    best_match = None
+    best_score = float('-inf')
+
+    for template_file in os.listdir('card_img'):
+        template_path = os.path.join('card_img', template_file)
+        template_img = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+
+        result = cv2.matchTemplate(query_img, template_img, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, _ = cv2.minMaxLoc(result)
+
+        if max_val > best_score:
+            best_score = max_val
+            best_match = os.path.splitext(template_file)[0]
+    return best_match
+
+
+def get_count(name, num):
+    if name not in id_set:
+        id_set.add(name)
+        return num_mapping.get(num, 0)
+    else:
+        return 0
+
+
+running_count = 0
+id_set = set()
+num_mapping = {
+    "two": 1, "three": 1, "four": 1, "five": 1, "six": 1,
+    "seven": 0, "eight": 0, "nine": 0,
+    "ten": -1, "jack": -1, "queen": -1, "king": -1, "ace": -1
+}
+
+
+img = cv2.imread('assets/fourCards3.jpg')
 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 threshold_img = cv2.threshold(gray_img, 190, 255, cv2.THRESH_BINARY)[1]
 
@@ -51,7 +86,7 @@ min_contour_area = 1000
 target_width, target_height = 200, 300
 
 # Iterate through contours
-for i, contour in enumerate(contours):
+for contour in contours:
     contour_area = cv2.contourArea(contour)
     if contour_area > min_contour_area:
         # Draw the contour on the image
@@ -80,8 +115,12 @@ for i, contour in enumerate(contours):
             warped_card = cv2.warpPerspective(img, perspective_matrix, (target_width, target_height))
 
             # Get card information (replace this with your logic)
-            car_id = get_card_info(warped_card, identifier=i + 1)
+            card_id, card_num = get_card_info(warped_card)
+            running_count += get_count(card_id, card_num)
 
+
+print("Updated ID Set:", id_set)
+print(running_count)
 # Display the image with all the contours
 cv2.imshow('Contours', img_with_contours)
 cv2.waitKey(0)
