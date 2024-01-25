@@ -12,24 +12,18 @@ def get_card_info(card_image):
     number_img = crop_img[0:100, 0:60]
     suit_img = crop_img[100:170, 0:60]
 
-    # Find contours in the number and suit images
     contours_number, _ = cv2.findContours(number_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Check if there are contours in the suit image
     if contours_number:
         contours_suit, _ = cv2.findContours(suit_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Check if there are contours in the suit image
         if contours_suit:
-            # Get the minimum upright bounding rectangles for number and suit
             x_number, y_number, w_number, h_number = cv2.boundingRect(contours_number[0])
             x_suit, y_suit, w_suit, h_suit = cv2.boundingRect(contours_suit[0])
 
-            # Extract regions inside the bounding rectangles
             region_number = number_img[y_number:y_number + h_number, x_number:x_number + w_number]
             region_suit = suit_img[y_suit:y_suit + h_suit, x_suit:x_suit + w_suit]
 
-            # Resize the regions to 70 x 110
             resized_region_number = cv2.resize(region_number, (70, 110), interpolation=cv2.INTER_LINEAR)
             resized_region_suit = cv2.resize(region_suit, (70, 110), interpolation=cv2.INTER_LINEAR)
 
@@ -69,69 +63,40 @@ def get_count(name, num):
 
 
 def process_video_frame(frame):
-    global running_count  # Declare running_count as a global variable
-    # Convert the frame to grayscale
+    global running_count
     gray_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    # Thresholding
     threshold_img = cv2.threshold(gray_img, 190, 255, cv2.THRESH_BINARY)[1]
-
-    # Find contours using RETR_EXTERNAL
     contours, _ = cv2.findContours(threshold_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Create a copy of the original frame to draw contours on
     img_with_contours = frame.copy()
 
-    # Iterate through contours
     for contour in contours:
         contour_area = cv2.contourArea(contour)
-        if contour_area > 1000:  # Adjust the minimum contour area threshold
-            # Draw the contour on the image
+        if contour_area > 1000:
             cv2.drawContours(img_with_contours, [contour], -1, (0, 255, 0), 3)
-
-            # Create a mask for the current contour
             mask = np.zeros_like(threshold_img)
             cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
-
-            # Get the corners of the contour
             epsilon = 0.04 * cv2.arcLength(contour, True)
             corners = cv2.approxPolyDP(contour, epsilon, True)
 
             if len(corners) == 4:
-                # Sort the corners based on their sum
                 corners = np.array(sorted(corners, key=lambda x: np.sum(x, axis=1)))
-
-                # Create source and destination points for top-down view transformation
                 src_pts = corners.astype(np.float32)
                 dst_pts = np.float32([[0, 0], [target_width, 0], [0, target_height], [target_width, target_height]])
-
-                # Compute the perspective transformation matrix
                 perspective_matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
-
-                # Apply the perspective transformation to extract the card
                 warped_card = cv2.warpPerspective(frame, perspective_matrix, (target_width, target_height))
-
-                # Get card information (replace this with your logic)
                 card_index, card_number = get_card_info(warped_card)
                 if card_index is not None:
                     running_count += get_count(card_index, card_number)
 
-    # Display the running count on the bottom left of the frame
     cv2.putText(img_with_contours, f"Running Count: {running_count}", (10, frame.shape[0] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-    # Display the frame with contours
     cv2.imshow('Contours', img_with_contours)
 
 
-# Load video file
-video_path = 'assets/cardVideo.mp4'
+video_path = 'assets/card_dealing.mp4'
 cap = cv2.VideoCapture(video_path)
-
-# Target size for each card
 target_width, target_height = 200, 300
-
-# Initialize variables
 running_count = 0
 id_set = set()
 num_mapping = {
@@ -145,13 +110,11 @@ while cap.isOpened():
     if not ret:
         break
 
-    # Process the video frame
     process_video_frame(vid_frame)
 
     if cv2.waitKey(30) & 0xFF == ord('q'):
         break
 
-# Release video capture object and close windows
 cap.release()
 cv2.destroyAllWindows()
 
