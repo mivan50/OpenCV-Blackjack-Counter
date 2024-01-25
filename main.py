@@ -54,12 +54,29 @@ def find_best_match(query_img, folder, min_similarity=0.8):
     return best_match
 
 
-def get_count(name, num):
+def check_seen(name):
     if name not in id_set:
         id_set.add(name)
-        return num_mapping.get(num, 0)
+        return True
     else:
-        return 0
+        return False
+
+
+def get_card_owner(corners):
+    if len(corners) > 0 and corners[0][0, 1] < video_height // 3:
+        return "dealer"
+    else:
+        return "player"
+
+
+def count_update(owner, value):
+    global player_count
+    global dealer_count
+
+    if owner == "dealer":
+        dealer_count += card_values.get(value)
+    else:
+        player_count += card_values.get(value)
 
 
 def process_video_frame(frame):
@@ -85,10 +102,16 @@ def process_video_frame(frame):
                 perspective_matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
                 warped_card = cv2.warpPerspective(frame, perspective_matrix, (target_width, target_height))
                 card_index, card_number = get_card_info(warped_card)
-                if card_index is not None:
-                    running_count += get_count(card_index, card_number)
+                if card_index is not None and check_seen(card_index):
+                    running_count += num_mapping.get(card_number)
+                    card_owner = get_card_owner(corners)
+                    count_update(card_owner, card_number)
 
     cv2.putText(img_with_contours, f"Running Count: {running_count}", (10, frame.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+    count_text = f"Running Count: {running_count}   Player Count: {player_count}   Dealer Count: {dealer_count}"
+    cv2.putText(img_with_contours, count_text, (10, frame.shape[0] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     cv2.imshow('Contours', img_with_contours)
@@ -96,13 +119,22 @@ def process_video_frame(frame):
 
 video_path = 'assets/card_dealing.mp4'
 cap = cv2.VideoCapture(video_path)
+video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 target_width, target_height = 200, 300
 running_count = 0
+dealer_count = 0
+player_count = 0
 id_set = set()
 num_mapping = {
     "two": 1, "three": 1, "four": 1, "five": 1, "six": 1,
     "seven": 0, "eight": 0, "nine": 0,
     "ten": -1, "jack": -1, "queen": -1, "king": -1, "ace": -1
+}
+
+card_values = {
+    "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "jack": 10, "queen": 10, "king": 10, "ace": 10
 }
 
 while cap.isOpened():
