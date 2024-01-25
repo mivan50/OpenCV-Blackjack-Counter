@@ -14,28 +14,33 @@ def get_card_info(card_image):
 
     # Find contours in the number and suit images
     contours_number, _ = cv2.findContours(number_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours_suit, _ = cv2.findContours(suit_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Get the minimum upright bounding rectangles for number and suit
-    x_number, y_number, w_number, h_number = cv2.boundingRect(contours_number[0])
-    x_suit, y_suit, w_suit, h_suit = cv2.boundingRect(contours_suit[0])
+    # Check if there are contours in the suit image
+    if contours_number:
+        contours_suit, _ = cv2.findContours(suit_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Extract regions inside the bounding rectangles
-    region_number = number_img[y_number:y_number + h_number, x_number:x_number + w_number]
-    region_suit = suit_img[y_suit:y_suit + h_suit, x_suit:x_suit + w_suit]
+        # Check if there are contours in the suit image
+        if contours_suit:
+            # Get the minimum upright bounding rectangles for number and suit
+            x_number, y_number, w_number, h_number = cv2.boundingRect(contours_number[0])
+            x_suit, y_suit, w_suit, h_suit = cv2.boundingRect(contours_suit[0])
 
-    # Resize the regions to 70 x 110
-    resized_region_number = cv2.resize(region_number, (70, 110), interpolation=cv2.INTER_LINEAR)
-    resized_region_suit = cv2.resize(region_suit, (70, 110), interpolation=cv2.INTER_LINEAR)
+            # Extract regions inside the bounding rectangles
+            region_number = number_img[y_number:y_number + h_number, x_number:x_number + w_number]
+            region_suit = suit_img[y_suit:y_suit + h_suit, x_suit:x_suit + w_suit]
 
-    card_num = find_best_match(resized_region_number, 'num_img', min_similarity=0.8)
-    card_suit = find_best_match(resized_region_suit, 'suit_img', min_similarity=0.8)
+            # Resize the regions to 70 x 110
+            resized_region_number = cv2.resize(region_number, (70, 110), interpolation=cv2.INTER_LINEAR)
+            resized_region_suit = cv2.resize(region_suit, (70, 110), interpolation=cv2.INTER_LINEAR)
 
-    if card_num is not None and card_suit is not None:
-        card_id = card_num + card_suit
-        return card_id, card_num
-    else:
-        return None, None
+            card_num = find_best_match(resized_region_number, 'num_img', min_similarity=0.8)
+            card_suit = find_best_match(resized_region_suit, 'suit_img', min_similarity=0.8)
+
+            if card_num is not None and card_suit is not None:
+                card_id = card_num + card_suit
+                return card_id, card_num
+
+    return None, None
 
 
 def find_best_match(query_img, folder, min_similarity=0.8):
@@ -63,26 +68,8 @@ def get_count(name, num):
         return 0
 
 
-running_count = 0
-id_set = set()
-num_mapping = {
-    "two": 1, "three": 1, "four": 1, "five": 1, "six": 1,
-    "seven": 0, "eight": 0, "nine": 0,
-    "ten": -1, "jack": -1, "queen": -1, "king": -1, "ace": -1
-}
-
-# Load video file
-video_path = 'assets/cardVideo.mp4'
-cap = cv2.VideoCapture(video_path)
-
-# Target size for each card
-target_width, target_height = 200, 300
-
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-
+def process_video_frame(frame):
+    global running_count  # Declare running_count as a global variable
     # Convert the frame to grayscale
     gray_img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -129,10 +116,37 @@ while cap.isOpened():
                 if card_index is not None:
                     running_count += get_count(card_index, card_number)
 
-    print("Updated ID Set:", id_set)
-    print("Running Count:", running_count)
+    # Display the running count on the bottom left of the frame
+    cv2.putText(img_with_contours, f"Running Count: {running_count}", (10, frame.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
     # Display the frame with contours
     cv2.imshow('Contours', img_with_contours)
+
+
+# Load video file
+video_path = 'assets/cardVideo.mp4'
+cap = cv2.VideoCapture(video_path)
+
+# Target size for each card
+target_width, target_height = 200, 300
+
+# Initialize variables
+running_count = 0
+id_set = set()
+num_mapping = {
+    "two": 1, "three": 1, "four": 1, "five": 1, "six": 1,
+    "seven": 0, "eight": 0, "nine": 0,
+    "ten": -1, "jack": -1, "queen": -1, "king": -1, "ace": -1
+}
+
+while cap.isOpened():
+    ret, vid_frame = cap.read()
+    if not ret:
+        break
+
+    # Process the video frame
+    process_video_frame(vid_frame)
 
     if cv2.waitKey(30) & 0xFF == ord('q'):
         break
