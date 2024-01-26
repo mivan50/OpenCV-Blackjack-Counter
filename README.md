@@ -15,7 +15,7 @@ This Blackjack Card Counter, built with Python and utilizing the OpenCV library,
 - **Flexible Input:** Supports both video files and live video captures for versatile use.
 
 ## Preview:
-![Preview_GIF](https://media.giphy.com/media/tHM6qckupweiy7gZKl/giphy-downsized-large.gif)
+![Preview_GIF](https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYTNjMmU5cGVvaDhuaWhja2Vkc3dhbDF3Nm02OXBkOGp0bWtpNTloZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ePnQprnoyDdsXUbNxX/giphy-downsized-large.gif)
 
 ## 🚀 Getting Started
 1. **Requirements:**
@@ -39,7 +39,7 @@ This Blackjack Card Counter, built with Python and utilizing the OpenCV library,
 By default, the script processes a video file. However, you can customize the input to either use a different video file or enable live video capture.
 
 1. **Change Video File:**
-   - Open `card_counting_script.py` in a text editor.
+   - Open `main.py` in a text editor.
    - Locate the `video_path` variable and update it with the path to your desired video file.
 
      ```python
@@ -47,12 +47,19 @@ By default, the script processes a video file. However, you can customize the in
      ```
 
 2. **Use Live Video Capture:**
-   - Open `card_counting_script.py` in a text editor.
+   - Open `main.py` in a text editor.
    - Set `video_path` to `0` to enable live video capture.
 
      ```python
      video_path = 0  # for live video capture
      ```
+
+## 📥 Download
+Clone the repository:
+
+```bash
+git clone https://github.com/mivan50/OpenCV-Blackjack-Counter.git
+```
 
 ## 📝 License
 
